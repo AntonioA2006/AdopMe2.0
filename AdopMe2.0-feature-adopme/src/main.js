@@ -131,6 +131,17 @@ const authFeedback = document.querySelector('#auth-feedback');
 const authToast = document.querySelector('#auth-toast');
 const trackingDialog = document.querySelector('#tracking-dialog');
 const trackingList = document.querySelector('#tracking-list');
+const petDetailDialog = document.querySelector('#pet-detail-dialog');
+const petDetailTitle = document.querySelector('#pet-detail-title');
+const petDetailBreed = document.querySelector('#pet-detail-breed');
+const petDetailImage = document.querySelector('#pet-detail-image');
+const petDetailStatus = document.querySelector('#pet-detail-status');
+const petDetailTags = document.querySelector('#pet-detail-tags');
+const petDetailDescription = document.querySelector('#pet-detail-description');
+const petDetailAge = document.querySelector('#pet-detail-age');
+const petDetailSpecies = document.querySelector('#pet-detail-species');
+const petDetailFavorite = document.querySelector('#pet-detail-favorite');
+const petDetailAdopt = document.querySelector('#pet-detail-adopt');
 const refugeDialog = document.querySelector('#refuge-dialog');
 const managedPets = document.querySelector('#managed-pets');
 const managedRequests = document.querySelector('#managed-requests');
@@ -218,6 +229,34 @@ function renderPets() {
       </article>`;
   }).join('');
   observeReveals(petGrid);
+}
+
+function openPetDetail(petId) {
+  const pet = adoptionTools.getPetById(petId);
+  if (!pet) return;
+
+  const isSaved = isPetSaved(pet.id);
+  const detailTags = [
+    pet.especie,
+    pet.edad,
+    pet.raza,
+    isSaved ? 'Favorito' : 'Disponible'
+  ];
+
+  petDetailTitle.textContent = pet.nombre;
+  petDetailBreed.textContent = pet.raza;
+  petDetailImage.src = pet.foto;
+  petDetailImage.alt = `${pet.especie} ${pet.nombre}, ${pet.raza}`;
+  petDetailStatus.textContent = pet.estado || 'Disponible';
+  petDetailStatus.classList.toggle('status-chip', true);
+  petDetailTags.innerHTML = detailTags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('');
+  petDetailDescription.textContent = pet.descripcion || 'Una mascota que busca un hogar lleno de cariño y estabilidad.';
+  petDetailAge.textContent = pet.edad;
+  petDetailSpecies.textContent = pet.especie;
+  petDetailFavorite.textContent = isSaved ? 'Quitar de favoritos' : 'Guardar en favoritos';
+  petDetailFavorite.dataset.petId = String(pet.id);
+  petDetailAdopt.dataset.petId = String(pet.id);
+  petDetailDialog.showModal();
 }
 
 function openAdoptionForm(petId) {
@@ -580,6 +619,7 @@ savedFilter.addEventListener('click', () => {
 petGrid.addEventListener('click', (event) => {
   const favoriteButton = event.target.closest('[data-favorite]');
   const adoptButton = event.target.closest('[data-adopt]');
+  const card = event.target.closest('.pet-card');
 
   if (favoriteButton) {
     const petId = favoriteButton.dataset.favorite;
@@ -588,9 +628,42 @@ petGrid.addEventListener('click', (event) => {
       : [...savedPets, petId];
     saveFavorites();
     renderPets();
+    return;
   }
 
-  if (adoptButton) openAdoptionForm(adoptButton.dataset.adopt);
+  if (adoptButton) {
+    openAdoptionForm(adoptButton.dataset.adopt);
+    return;
+  }
+
+  if (card) {
+    const petId = card.querySelector('[data-adopt]')?.dataset.adopt || card.querySelector('[data-favorite]')?.dataset.favorite;
+    if (petId) openPetDetail(petId);
+  }
+});
+
+petDetailFavorite.addEventListener('click', () => {
+  const petId = petDetailFavorite.dataset.petId;
+  if (!petId) return;
+
+  savedPets = isPetSaved(petId)
+    ? savedPets.filter((id) => String(id) !== String(petId))
+    : [...savedPets, petId];
+  saveFavorites();
+  renderPets();
+  openPetDetail(petId);
+});
+
+petDetailAdopt.addEventListener('click', () => {
+  const petId = petDetailAdopt.dataset.petId;
+  if (!petId) return;
+  petDetailDialog.close();
+  openAdoptionForm(petId);
+});
+
+document.querySelector('#pet-detail-close').addEventListener('click', () => petDetailDialog.close());
+petDetailDialog.addEventListener('click', (event) => {
+  if (event.target === petDetailDialog) petDetailDialog.close();
 });
 
 document.querySelectorAll('[data-open-requests]').forEach((button) => {
