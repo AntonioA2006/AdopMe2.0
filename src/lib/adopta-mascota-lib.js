@@ -105,6 +105,17 @@ export class AdoptionTools {
     return raw ? JSON.parse(raw) : [];
   }
 
+  /** Actualiza una solicitud por su identificador y devuelve la versión guardada. */
+  updateAdoptionRequest(id, updates) {
+    const current = this.getAdoptionRequests();
+    const index = current.findIndex(request => String(request.solicitudId) === String(id));
+    if (index === -1) return null;
+
+    current[index] = { ...current[index], ...updates };
+    localStorage.setItem(this._storageKey(), JSON.stringify(current));
+    return current[index];
+  }
+
   /** Elimina todas las solicitudes guardadas (útil para pruebas). */
   clearAdoptionRequests() {
     localStorage.removeItem(this._storageKey());
