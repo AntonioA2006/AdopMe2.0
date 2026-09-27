@@ -7,6 +7,8 @@ const pets = [
     especie: 'Perro',
     raza: 'Mestizo',
     edad: '2 años',
+    edadGrupo: 'Adulto',
+    tamano: 'Mediano',
     categoria: 'Perros',
     foto: 'https://images.unsplash.com/photo-1537151625747-768eb6cf92b2?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Un compañero alegre que convierte cualquier paseo en una aventura.'
@@ -17,6 +19,8 @@ const pets = [
     especie: 'Gato',
     raza: 'Gato doméstico',
     edad: '1 año',
+    edadGrupo: 'Cachorro',
+    tamano: 'Pequeño',
     categoria: 'Gatos',
     foto: 'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Curiosa, dulce y experta en encontrar los rayitos de sol.'
@@ -27,6 +31,8 @@ const pets = [
     especie: 'Perro',
     raza: 'Labrador mestizo',
     edad: '3 años',
+    edadGrupo: 'Adulto',
+    tamano: 'Grande',
     categoria: 'Perros',
     foto: 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Tranquilo y cariñoso. Su plan favorito es estar cerca de ti.'
@@ -37,6 +43,8 @@ const pets = [
     especie: 'Gato',
     raza: 'Gato doméstico',
     edad: '8 meses',
+    edadGrupo: 'Cachorro',
+    tamano: 'Pequeño',
     categoria: 'Gatos',
     foto: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Una pequeña exploradora que llena la casa de energía y ternura.'
@@ -47,6 +55,8 @@ const pets = [
     especie: 'Perro',
     raza: 'Border collie mestizo',
     edad: '4 años',
+    edadGrupo: 'Adulto',
+    tamano: 'Grande',
     categoria: 'Perros',
     foto: 'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Inteligente, noble y listo para ser tu compañero de equipo.'
@@ -57,11 +67,40 @@ const pets = [
     especie: 'Gato',
     raza: 'Gato doméstico',
     edad: '2 años',
+    edadGrupo: 'Adulto',
+    tamano: 'Pequeño',
     categoria: 'Gatos',
     foto: 'https://images.unsplash.com/photo-1495360010541-f48722b34f7d?auto=format&fit=crop&w=900&q=85',
     descripcion: 'Serena y observadora; se gana tu confianza con ronroneos.'
   }
 ];
+
+const ageFilters = ['Todos', 'Cachorro', 'Adulto', 'Senior'];
+const sizeFilters = ['Todos', 'Pequeño', 'Mediano', 'Grande'];
+
+function inferAgeGroup(ageText) {
+  const normalized = String(ageText || '').toLowerCase();
+  const match = normalized.match(/(\d+)/);
+  if (!match) return 'Adulto';
+
+  const value = Number(match[1]);
+  if (normalized.includes('mes')) return value <= 6 ? 'Cachorro' : 'Adulto';
+  if (normalized.includes('año')) {
+    if (value <= 1) return 'Cachorro';
+    if (value >= 8) return 'Senior';
+    return 'Adulto';
+  }
+
+  return 'Adulto';
+}
+
+function inferPetSize(pet) {
+  if (pet?.tamano) return pet.tamano;
+  if (pet?.especie === 'Gato') return 'Pequeño';
+  if (pet?.raza?.toLowerCase().includes('labrador')) return 'Grande';
+  if (pet?.raza?.toLowerCase().includes('border')) return 'Grande';
+  return 'Mediano';
+}
 
 function readCatalogPets() {
   try {
@@ -129,6 +168,11 @@ const loginForm = document.querySelector('#login-form');
 const registerForm = document.querySelector('#register-form');
 const authFeedback = document.querySelector('#auth-feedback');
 const authToast = document.querySelector('#auth-toast');
+const themeToggle = document.querySelector('#theme-toggle');
+const statsAvailable = document.querySelector('#stats-available');
+const statsRequests = document.querySelector('#stats-requests');
+const statsFamilies = document.querySelector('#stats-families');
+const recommendationGrid = document.querySelector('#recommendation-grid');
 const trackingDialog = document.querySelector('#tracking-dialog');
 const trackingList = document.querySelector('#tracking-list');
 const petDetailDialog = document.querySelector('#pet-detail-dialog');
@@ -149,6 +193,8 @@ const petCreateForm = document.querySelector('#pet-create-form');
 const petFormFeedback = document.querySelector('#pet-form-feedback');
 let activeCategory = 'Todas';
 let showSavedOnly = false;
+let activeAgeFilter = 'Todos';
+let activeSizeFilter = 'Todos';
 let savedPets = readSavedPets();
 let authSession = readAuthSession();
 let toastTimeout;
@@ -199,7 +245,15 @@ function persistCatalog() {
 function renderPets() {
   const matchingPets = adoptionTools.searchAndFilter(searchInput.value, activeCategory)
     .filter((pet) => pet.estado !== 'Adoptado')
-    .filter((pet) => !showSavedOnly || isPetSaved(pet.id));
+    .filter((pet) => !showSavedOnly || isPetSaved(pet.id))
+    .filter((pet) => {
+      const ageGroup = pet.edadGrupo || inferAgeGroup(pet.edad);
+      return activeAgeFilter === 'Todos' || ageGroup === activeAgeFilter;
+    })
+    .filter((pet) => {
+      const petSize = pet.tamano || inferPetSize(pet);
+      return activeSizeFilter === 'Todos' || petSize === activeSizeFilter;
+    });
 
   const availableCount = matchingPets.filter((pet) => (pet.estado || 'Disponible') === 'Disponible').length;
   const pendingCount = matchingPets.length - availableCount;
@@ -228,6 +282,8 @@ function renderPets() {
         </div>
       </article>`;
   }).join('');
+  petGrid.classList.remove('is-refreshing');
+  window.requestAnimationFrame(() => petGrid.classList.add('is-refreshing'));
   observeReveals(petGrid);
 }
 
@@ -474,6 +530,123 @@ function showAuthToast(message) {
   toastTimeout = window.setTimeout(() => authToast.classList.remove('is-visible'), 3200);
 }
 
+function renderImpactStats() {
+  const pets = adoptionTools.getPets();
+  const available = pets.filter((pet) => (pet.estado || 'Disponible') === 'Disponible').length;
+  const requests = adoptionTools.getAdoptionRequests();
+  const families = requests.filter((request) => (request.estadoSolicitud || 'Recibida') === 'Adopción completada').length;
+
+  if (statsAvailable) statsAvailable.textContent = String(available);
+  if (statsRequests) statsRequests.textContent = String(requests.length);
+  if (statsFamilies) statsFamilies.textContent = String(families);
+}
+
+function getRecommendedPets() {
+  const availablePets = adoptionTools.getPets()
+    .filter((pet) => (pet.estado || 'Disponible') === 'Disponible')
+    .sort((a, b) => {
+      const matchA = (a.especie === 'Perro' ? 2 : 1) + (a.edad.includes('mes') ? 1 : 0);
+      const matchB = (b.especie === 'Perro' ? 2 : 1) + (b.edad.includes('mes') ? 1 : 0);
+      return matchB - matchA;
+    });
+
+  return availablePets.slice(0, 3);
+}
+
+function renderRecommendations() {
+  if (!recommendationGrid) return;
+
+  const recommended = getRecommendedPets();
+
+  recommendationGrid.innerHTML = recommended.map((pet) => {
+    const isSaved = isPetSaved(pet.id);
+    return `
+      <article class="recommendation-card reveal">
+        <div class="recommendation-photo-wrap">
+          <img src="${escapeHtml(pet.foto)}" alt="${escapeHtml(pet.nombre)}" loading="lazy" />
+          <button class="favorite-button${isSaved ? ' is-saved' : ''}" type="button" data-favorite="${escapeHtml(pet.id)}" aria-label="${isSaved ? 'Quitar' : 'Guardar'} a ${escapeHtml(pet.nombre)} ${isSaved ? 'de' : 'en'} favoritos" aria-pressed="${isSaved}"><span aria-hidden="true">${isSaved ? '♥' : '♡'}</span></button>
+        </div>
+        <div class="recommendation-body">
+          <div class="pet-name-row"><h3>${escapeHtml(pet.nombre)}</h3><span>${escapeHtml(pet.edad)}</span></div>
+          <p class="pet-breed">${escapeHtml(pet.raza)}</p>
+          <p class="pet-description">${escapeHtml(pet.descripcion)}</p>
+          <div class="recommendation-footer">
+            <span class="match-badge">Match ideal</span>
+            <button class="meet-button" type="button" data-adopt="${escapeHtml(pet.id)}">Conocerle <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  observeReveals(recommendationGrid);
+}
+
+function renderCatalogFilters() {
+  const ageFilterGroup = document.querySelector('#age-filters');
+  const sizeFilterGroup = document.querySelector('#size-filters');
+
+  if (ageFilterGroup) {
+    ageFilterGroup.innerHTML = ageFilters.map((filter) => `
+      <button class="facet-chip${activeAgeFilter === filter ? ' is-active' : ''}" type="button" data-age-filter="${filter}" aria-pressed="${String(activeAgeFilter === filter)}">${filter}</button>
+    `).join('');
+  }
+
+  if (sizeFilterGroup) {
+    sizeFilterGroup.innerHTML = sizeFilters.map((filter) => `
+      <button class="facet-chip${activeSizeFilter === filter ? ' is-active' : ''}" type="button" data-size-filter="${filter}" aria-pressed="${String(activeSizeFilter === filter)}">${filter}</button>
+    `).join('');
+  }
+}
+
+function applyTheme(theme) {
+  const nextTheme = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = nextTheme;
+  if (themeToggle) {
+    const icon = themeToggle.querySelector('.theme-toggle-icon');
+    const text = themeToggle.querySelector('.theme-toggle-text');
+    const isDark = nextTheme === 'dark';
+
+    if (icon) icon.textContent = isDark ? '☾' : '☼';
+    if (text) text.textContent = isDark ? 'Claro' : 'Oscuro';
+    themeToggle.setAttribute('aria-label', isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro');
+  }
+  localStorage.setItem('adopme-theme', nextTheme);
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 120;
+}
+
+function isStrongPassword(value) {
+  return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(value);
+}
+
+function validateAuthAccount({ nombre = '', correo = '', password = '' }, mode) {
+  const trimmedName = nombre.trim();
+  const trimmedEmail = correo.trim().toLowerCase();
+  const trimmedPassword = password.trim();
+
+  if (mode === 'register' && trimmedName.length < 2) {
+    return { valid: false, message: 'Escribe tu nombre completo para continuar.' };
+  }
+
+  if (!trimmedEmail || !isValidEmail(trimmedEmail)) {
+    return { valid: false, message: 'Introduce un correo electrónico válido.' };
+  }
+
+  if (!trimmedPassword || (mode === 'register' ? !isStrongPassword(trimmedPassword) : trimmedPassword.length < 8)) {
+    return {
+      valid: false,
+      message: mode === 'register'
+        ? 'La contraseña debe tener al menos 8 caracteres, incluyendo mayúsculas, minúsculas y números.'
+        : 'La contraseña debe tener al menos 8 caracteres.'
+    };
+  }
+
+  return { valid: true, message: '', data: { nombre: trimmedName, correo: trimmedEmail, password: trimmedPassword } };
+}
+
 function toHex(bytes) {
   return [...bytes].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -539,14 +712,22 @@ loginForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submitButton = loginForm.querySelector('[type="submit"]');
   const formData = new FormData(loginForm);
-  const correo = String(formData.get('correo')).trim().toLowerCase();
+  const correo = String(formData.get('correo')); 
   const password = String(formData.get('password'));
+  const validation = validateAuthAccount({ correo, password }, 'login');
+
   submitButton.disabled = true;
   authFeedback.textContent = '';
 
+  if (!validation.valid) {
+    authFeedback.textContent = validation.message;
+    submitButton.disabled = false;
+    return;
+  }
+
   try {
-    const account = getAuthAccounts().find((entry) => entry.correo === correo);
-    if (!account || await hashPassword(password, account.salt) !== account.passwordHash) {
+    const account = getAuthAccounts().find((entry) => entry.correo === validation.data.correo);
+    if (!account || await hashPassword(validation.data.password, account.salt) !== account.passwordHash) {
       authFeedback.textContent = 'No encontramos esa cuenta o la contraseña no coincide.';
       return;
     }
@@ -566,32 +747,45 @@ registerForm.addEventListener('submit', async (event) => {
   event.preventDefault();
   const submitButton = registerForm.querySelector('[type="submit"]');
   const formData = new FormData(registerForm);
-  const nombre = String(formData.get('nombre')).trim();
-  const correo = String(formData.get('correo')).trim().toLowerCase();
+  const nombre = String(formData.get('nombre'));
+  const correo = String(formData.get('correo'));
   const password = String(formData.get('password'));
+  const validation = validateAuthAccount({ nombre, correo, password }, 'register');
+
   submitButton.disabled = true;
   authFeedback.textContent = '';
 
+  if (!validation.valid) {
+    authFeedback.textContent = validation.message;
+    submitButton.disabled = false;
+    return;
+  }
+
   try {
     const accounts = getAuthAccounts();
-    if (accounts.some((account) => account.correo === correo)) {
+    if (accounts.some((account) => account.correo === validation.data.correo)) {
       authFeedback.textContent = 'Ya existe una cuenta con ese correo.';
       return;
     }
 
     const salt = toHex(window.crypto.getRandomValues(new Uint8Array(16)));
-    const account = { nombre, correo, salt, passwordHash: await hashPassword(password, salt) };
+    const account = { nombre: validation.data.nombre, correo: validation.data.correo, salt, passwordHash: await hashPassword(validation.data.password, salt) };
     accounts.push(account);
     localStorage.setItem('adopme-accounts', JSON.stringify(accounts));
     startAuthSession(account);
     registerForm.reset();
     continueAfterAuthentication();
-    showAuthToast(`¡Bienvenido, ${nombre.split(' ')[0]}!`);
+    showAuthToast(`¡Bienvenido, ${validation.data.nombre.split(' ')[0]}!`);
   } catch {
     authFeedback.textContent = 'No pudimos guardar tu cuenta en este navegador. Inténtalo de nuevo.';
   } finally {
     submitButton.disabled = false;
   }
+});
+
+themeToggle?.addEventListener('click', () => {
+  const nextTheme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
 });
 
 document.querySelector('.filter-group').addEventListener('click', (event) => {
@@ -604,6 +798,22 @@ document.querySelector('.filter-group').addEventListener('click', (event) => {
     filterButton.classList.toggle('is-active', isActive);
     filterButton.setAttribute('aria-pressed', String(isActive));
   });
+  renderPets();
+});
+
+document.querySelector('#age-filters')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-age-filter]');
+  if (!button) return;
+  activeAgeFilter = button.dataset.ageFilter;
+  renderCatalogFilters();
+  renderPets();
+});
+
+document.querySelector('#size-filters')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-size-filter]');
+  if (!button) return;
+  activeSizeFilter = button.dataset.sizeFilter;
+  renderCatalogFilters();
   renderPets();
 });
 
@@ -628,6 +838,7 @@ petGrid.addEventListener('click', (event) => {
       : [...savedPets, petId];
     saveFavorites();
     renderPets();
+    renderRecommendations();
     return;
   }
 
@@ -639,6 +850,26 @@ petGrid.addEventListener('click', (event) => {
   if (card) {
     const petId = card.querySelector('[data-adopt]')?.dataset.adopt || card.querySelector('[data-favorite]')?.dataset.favorite;
     if (petId) openPetDetail(petId);
+  }
+});
+
+recommendationGrid?.addEventListener('click', (event) => {
+  const favoriteButton = event.target.closest('[data-favorite]');
+  const adoptButton = event.target.closest('[data-adopt]');
+
+  if (favoriteButton) {
+    const petId = favoriteButton.dataset.favorite;
+    savedPets = isPetSaved(petId)
+      ? savedPets.filter((id) => String(id) !== String(petId))
+      : [...savedPets, petId];
+    saveFavorites();
+    renderPets();
+    renderRecommendations();
+    return;
+  }
+
+  if (adoptButton) {
+    openAdoptionForm(adoptButton.dataset.adopt);
   }
 });
 
@@ -709,8 +940,10 @@ petCreateForm.addEventListener('submit', (event) => {
     });
     adoptionTools.setPets(catalog);
     persistCatalog();
+    renderImpactStats();
     petCreateForm.reset();
     petFormFeedback.textContent = 'Mascota publicada en el catálogo de este navegador.';
+    showAuthToast('Mascota publicada correctamente.');
     renderManagedPets();
   } catch (error) {
     petFormFeedback.textContent = error instanceof TypeError
@@ -726,7 +959,9 @@ managedPets.addEventListener('change', (event) => {
   if (!pet || !petStatuses.includes(statusSelect.value)) return;
   pet.estado = statusSelect.value;
   persistCatalog();
+  renderImpactStats();
   renderManagedPets();
+  showAuthToast(`Estado de ${pet.nombre} actualizado.`);
 });
 
 managedPets.addEventListener('click', (event) => {
@@ -755,8 +990,10 @@ managedRequests.addEventListener('change', (event) => {
         renderManagedPets();
       }
     }
+    renderImpactStats();
     renderManagedRequests();
     renderTracking();
+    showAuthToast(`Solicitud actualizada a ${updated.estadoSolicitud}.`);
   }
 });
 
@@ -764,6 +1001,8 @@ document.querySelector('#reset-search').addEventListener('click', () => {
   searchInput.value = '';
   activeCategory = 'Todas';
   showSavedOnly = false;
+  activeAgeFilter = 'Todos';
+  activeSizeFilter = 'Todos';
   savedFilter.classList.remove('is-active');
   savedFilter.setAttribute('aria-pressed', 'false');
   document.querySelectorAll('.filter-button').forEach((button) => {
@@ -771,6 +1010,7 @@ document.querySelector('#reset-search').addEventListener('click', () => {
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-pressed', String(isActive));
   });
+  renderCatalogFilters();
   renderPets();
 });
 
@@ -790,8 +1030,10 @@ adoptionForm.addEventListener('submit', (event) => {
     setApplicationStep(1);
     dialogFormView.hidden = true;
     dialogSuccess.hidden = false;
+    renderImpactStats();
     renderTracking();
     renderManagedRequests();
+    showAuthToast('Solicitud enviada correctamente.');
   } catch {
     window.alert('No pudimos guardar tu solicitud. Revisa la configuración de almacenamiento de tu navegador e inténtalo de nuevo.');
   }
@@ -828,9 +1070,13 @@ document.addEventListener('keydown', (event) => {
 });
 
 saveFavorites();
+renderCatalogFilters();
 renderPets();
+renderRecommendations();
+renderImpactStats();
 observeReveals();
 updateAuthTrigger();
+applyTheme(localStorage.getItem('adopme-theme') || 'light');
 
 if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   const heroImage = document.querySelector('.hero-image');

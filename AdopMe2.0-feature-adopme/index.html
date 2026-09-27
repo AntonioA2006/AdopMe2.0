@@ -31,6 +31,10 @@
         <button class="nav-action" type="button" data-open-refuge>Panel refugios</button>
       </nav>
       <div class="header-actions">
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Cambiar modo de color">
+          <span class="theme-toggle-icon" aria-hidden="true">☼</span>
+          <span class="theme-toggle-text">Oscuro</span>
+        </button>
         <button class="auth-trigger" id="auth-trigger" type="button">Iniciar sesión</button>
         <a class="header-cta" href="#catalogo">Encontrar compañero <span aria-hidden="true">↗</span></a>
       </div>
@@ -52,6 +56,34 @@
         </div>
         <div class="hero-note"><span class="hero-note-number" id="pet-count">6</span><span>amigos listos<br />para conocerte</span></div>
         <span class="hero-caption">Pequeños encuentros, grandes historias.</span>
+      </section>
+
+      <section class="impact section-wrap reveal" aria-label="Estadísticas de AdopMe">
+        <div class="impact-grid">
+          <article class="impact-card">
+            <span class="impact-value" id="stats-available">0</span>
+            <span class="impact-label">Mascotas listas</span>
+          </article>
+          <article class="impact-card">
+            <span class="impact-value" id="stats-requests">0</span>
+            <span class="impact-label">Solicitudes</span>
+          </article>
+          <article class="impact-card">
+            <span class="impact-value" id="stats-families">0</span>
+            <span class="impact-label">Familias felices</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="recommendations section-wrap reveal" id="recomendaciones" aria-labelledby="recommendations-title">
+        <div class="catalog-heading">
+          <div>
+            <p class="eyebrow eyebrow-dark">Elegidos para ti</p>
+            <h2 id="recommendations-title">Tu <em>match</em> ideal</h2>
+          </div>
+          <p class="catalog-intro">Descubre quienes encajan mejor con tu estilo de vida.</p>
+        </div>
+        <div class="recommendation-grid" id="recommendation-grid"></div>
       </section>
 
       <section class="catalog section-wrap" id="catalogo" aria-labelledby="catalog-title">
@@ -76,6 +108,17 @@
             <button class="filter-button" type="button" data-category="Gatos" aria-pressed="false">Gatos</button>
             <button class="filter-button" type="button" data-category="Otros" aria-pressed="false">Otros</button>
           </div>
+
+          <div class="facet-group" aria-label="Filtrar por edad">
+            <span class="facet-label">Edad</span>
+            <div class="facet-chips" id="age-filters"></div>
+          </div>
+
+          <div class="facet-group" aria-label="Filtrar por tamaño">
+            <span class="facet-label">Tamaño</span>
+            <div class="facet-chips" id="size-filters"></div>
+          </div>
+
           <button class="saved-filter" id="saved-filter" type="button" aria-pressed="false"><span aria-hidden="true">♡</span> Favoritos <span id="saved-count">0</span></button>
         </div>
 
@@ -202,14 +245,14 @@
         <h2 id="auth-title">Qué gusto verte.</h2>
         <p class="auth-intro" id="auth-intro">Entra para guardar tus favoritos y seguir tus solicitudes.</p>
         <form class="auth-form" id="login-form">
-          <label>Correo electrónico<input name="correo" type="email" autocomplete="email" required maxlength="120" placeholder="tu@correo.com" /></label>
-          <label>Contraseña<input name="password" type="password" autocomplete="current-password" required minlength="8" placeholder="Al menos 8 caracteres" /></label>
+          <label>Correo electrónico<input name="correo" type="email" autocomplete="email" required maxlength="120" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Escribe un correo válido, por ejemplo: tu@correo.com" placeholder="tu@correo.com" /></label>
+          <label>Contraseña<input name="password" type="password" autocomplete="current-password" required minlength="8" title="La contraseña debe tener al menos 8 caracteres." placeholder="Al menos 8 caracteres" /></label>
           <button class="submit-button" type="submit">Iniciar sesión <span aria-hidden="true">↗</span></button>
         </form>
         <form class="auth-form" id="register-form" hidden>
-          <label>Tu nombre<input name="nombre" type="text" autocomplete="name" required maxlength="80" placeholder="Nombre y apellido" /></label>
-          <label>Correo electrónico<input name="correo" type="email" autocomplete="email" required maxlength="120" placeholder="tu@correo.com" /></label>
-          <label>Contraseña<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Al menos 8 caracteres" /></label>
+          <label>Tu nombre<input name="nombre" type="text" autocomplete="name" required minlength="2" maxlength="80" placeholder="Nombre y apellido" /></label>
+          <label>Correo electrónico<input name="correo" type="email" autocomplete="email" required maxlength="120" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Escribe un correo válido, por ejemplo: tu@correo.com" placeholder="tu@correo.com" /></label>
+          <label>Contraseña<input name="password" type="password" autocomplete="new-password" required minlength="8" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$" title="Debe incluir mayúsculas, minúsculas y números." placeholder="Al menos 8 caracteres" /></label>
           <button class="submit-button" type="submit">Crear cuenta <span aria-hidden="true">↗</span></button>
         </form>
         <p class="auth-feedback" id="auth-feedback" role="status" aria-live="polite"></p>
