@@ -75,6 +75,13 @@ const pets = [
   }
 ];
 
+const refuges = [
+  { id: 'centro', nombre: 'Huellas del Centro', ciudad: 'Morelia, Michoacán', direccion: 'Centro Histórico', lat: 19.7047, lng: -101.1951, mascotas: 18 },
+  { id: 'santa-maria', nombre: 'Casa Michi Morelia', ciudad: 'Morelia, Michoacán', direccion: 'Santa María de Guido', lat: 19.6758, lng: -101.1882, mascotas: 11 },
+  { id: 'tres-marias', nombre: 'Segundas Oportunidades', ciudad: 'Morelia, Michoacán', direccion: 'Zona Tres Marías', lat: 19.6828, lng: -101.1518, mascotas: 24 },
+  { id: 'la-huerta', nombre: 'Patitas al Rescate', ciudad: 'Morelia, Michoacán', direccion: 'La Huerta', lat: 19.6874, lng: -101.2325, mascotas: 9 }
+];
+
 const ageFilters = ['Todos', 'Cachorro', 'Adulto', 'Senior'];
 const sizeFilters = ['Todos', 'Pequeño', 'Mediano', 'Grande'];
 
@@ -191,6 +198,13 @@ const managedPets = document.querySelector('#managed-pets');
 const managedRequests = document.querySelector('#managed-requests');
 const petCreateForm = document.querySelector('#pet-create-form');
 const petFormFeedback = document.querySelector('#pet-form-feedback');
+const compatibilityDialog = document.querySelector('#compatibility-dialog');
+const compatibilityForm = document.querySelector('#compatibility-form');
+const quizFormView = document.querySelector('#quiz-form-view');
+const quizResult = document.querySelector('#quiz-result');
+const quizResultList = document.querySelector('#quiz-result-list');
+const refugeMapElement = document.querySelector('#refuge-map');
+const refugeList = document.querySelector('#refuge-list');
 let activeCategory = 'Todas';
 let showSavedOnly = false;
 let activeAgeFilter = 'Todos';
@@ -201,6 +215,16 @@ let toastTimeout;
 let applicationStep = 1;
 let pendingPetId = null;
 let pendingTracking = false;
+let compatibilityPreferences = readCompatibilityPreferences();
+let refugeMap;
+
+function readCompatibilityPreferences() {
+  try {
+    return JSON.parse(localStorage.getItem('adopme-compatibility') || 'null');
+  } catch {
+    return null;
+  }
+}
 
 const revealObserver = 'IntersectionObserver' in window
   ? new IntersectionObserver((entries, observer) => {
@@ -541,12 +565,41 @@ function renderImpactStats() {
   if (statsFamilies) statsFamilies.textContent = String(families);
 }
 
+function getPetCompatibilityScore(pet, preferences = compatibilityPreferences) {
+  if (!preferences) return 0;
+
+  const isDog = pet.especie === 'Perro';
+  const isCat = pet.especie === 'Gato';
+  const size = pet.tamano || inferPetSize(pet);
+  const ageGroup = pet.edadGrupo || inferAgeGroup(pet.edad);
+  let score = 60;
+
+  if (preferences.preferencia === 'perro' && isDog) score += 20;
+  if (preferences.preferencia === 'gato' && isCat) score += 20;
+  if (preferences.preferencia === 'indistinto') score += 5;
+  if (preferences.hogar === 'departamento' && (isCat || size === 'Pequeño')) score += 12;
+  if (preferences.hogar === 'casa' && (isDog || size === 'Mediano')) score += 9;
+  if (preferences.hogar === 'casa-jardin' && isDog) score += 14;
+  if (preferences.tiempo === 'poco' && isCat) score += 12;
+  if (preferences.tiempo === 'medio' && size !== 'Grande') score += 7;
+  if (preferences.tiempo === 'mucho' && isDog) score += 12;
+  if (preferences.experiencia === 'primera' && ageGroup === 'Adulto') score += 6;
+  if (preferences.experiencia === 'algo' && ageGroup !== 'Cachorro') score += 5;
+  if (preferences.experiencia === 'mucha' && (isDog || size === 'Grande')) score += 8;
+
+  return Math.min(score, 99);
+}
+
 function getRecommendedPets() {
   const availablePets = adoptionTools.getPets()
     .filter((pet) => (pet.estado || 'Disponible') === 'Disponible')
     .sort((a, b) => {
-      const matchA = (a.especie === 'Perro' ? 2 : 1) + (a.edad.includes('mes') ? 1 : 0);
-      const matchB = (b.especie === 'Perro' ? 2 : 1) + (b.edad.includes('mes') ? 1 : 0);
+      const matchA = compatibilityPreferences
+        ? getPetCompatibilityScore(a)
+        : (a.especie === 'Perro' ? 2 : 1) + (a.edad.includes('mes') ? 1 : 0);
+      const matchB = compatibilityPreferences
+        ? getPetCompatibilityScore(b)
+        : (b.especie === 'Perro' ? 2 : 1) + (b.edad.includes('mes') ? 1 : 0);
       return matchB - matchA;
     });
 
@@ -560,6 +613,7 @@ function renderRecommendations() {
 
   recommendationGrid.innerHTML = recommended.map((pet) => {
     const isSaved = isPetSaved(pet.id);
+    const matchScore = getPetCompatibilityScore(pet);
     return `
       <article class="recommendation-card reveal">
         <div class="recommendation-photo-wrap">
@@ -571,7 +625,7 @@ function renderRecommendations() {
           <p class="pet-breed">${escapeHtml(pet.raza)}</p>
           <p class="pet-description">${escapeHtml(pet.descripcion)}</p>
           <div class="recommendation-footer">
-            <span class="match-badge">Match ideal</span>
+            <span class="match-badge">${matchScore ? `${matchScore}% match` : 'Match ideal'}</span>
             <button class="meet-button" type="button" data-adopt="${escapeHtml(pet.id)}">Conocerle <span aria-hidden="true">↗</span></button>
           </div>
         </div>
@@ -580,6 +634,48 @@ function renderRecommendations() {
   }).join('');
 
   observeReveals(recommendationGrid);
+}
+
+function renderQuizResults() {
+  const matches = getRecommendedPets().map((pet) => ({ pet, score: getPetCompatibilityScore(pet) }));
+  quizResultList.innerHTML = matches.map(({ pet, score }) => `
+    <article class="quiz-result-item">
+      <img src="${escapeHtml(pet.foto)}" alt="${escapeHtml(pet.nombre)}" loading="lazy" />
+      <div><h3>${escapeHtml(pet.nombre)}</h3><p>${escapeHtml(pet.raza)} · ${escapeHtml(pet.edad)}</p></div>
+      <span>${score}%</span>
+      <button class="text-button" type="button" data-quiz-adopt="${escapeHtml(pet.id)}">Conocerle</button>
+    </article>`).join('');
+}
+
+function renderRefugeList() {
+  refugeList.innerHTML = refuges.map((refuge) => `
+    <button class="refuge-list-item" type="button" data-refuge-id="${escapeHtml(refuge.id)}">
+      <span class="refuge-list-index">0${refuges.indexOf(refuge) + 1}</span>
+      <span><strong>${escapeHtml(refuge.nombre)}</strong><small>${escapeHtml(refuge.ciudad)} · ${refuge.mascotas} mascotas</small></span>
+      <span aria-hidden="true">↗</span>
+    </button>`).join('');
+}
+
+function focusRefuge(refuge) {
+  refugeMap?.setView([refuge.lat, refuge.lng], 14);
+  refugeMap?.closePopup();
+  if (refugeMap && window.L) {
+    window.L.marker([refuge.lat, refuge.lng]).addTo(refugeMap).bindPopup(`<strong>${escapeHtml(refuge.nombre)}</strong><br>${escapeHtml(refuge.direccion)}`).openPopup();
+  }
+}
+
+function initializeRefugeMap() {
+  renderRefugeList();
+  if (!refugeMapElement || !window.L) {
+    refugeMapElement.innerHTML = '<p class="map-fallback">El mapa interactivo no está disponible ahora. Consulta los refugios de la lista.</p>';
+    return;
+  }
+
+  refugeMap = window.L.map(refugeMapElement, { scrollWheelZoom: false }).setView([19.695, -101.19], 13);
+  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap' }).addTo(refugeMap);
+  refuges.forEach((refuge) => {
+    window.L.marker([refuge.lat, refuge.lng]).addTo(refugeMap).bindPopup(`<strong>${escapeHtml(refuge.nombre)}</strong><br>${escapeHtml(refuge.direccion)}`);
+  });
 }
 
 function renderCatalogFilters() {
@@ -873,6 +969,48 @@ recommendationGrid?.addEventListener('click', (event) => {
   }
 });
 
+document.querySelectorAll('[data-open-quiz]').forEach((button) => {
+  button.addEventListener('click', () => {
+    quizFormView.hidden = false;
+    quizResult.hidden = true;
+    if (compatibilityPreferences) {
+      Object.entries(compatibilityPreferences).forEach(([name, value]) => {
+        const field = compatibilityForm.elements[name];
+        if (field) field.value = value;
+      });
+    }
+    compatibilityDialog.showModal();
+  });
+});
+
+compatibilityForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  compatibilityPreferences = Object.fromEntries(new FormData(compatibilityForm).entries());
+  localStorage.setItem('adopme-compatibility', JSON.stringify(compatibilityPreferences));
+  renderRecommendations();
+  renderQuizResults();
+  quizFormView.hidden = true;
+  quizResult.hidden = false;
+});
+
+document.querySelector('#quiz-close').addEventListener('click', () => compatibilityDialog.close());
+document.querySelector('#quiz-retry').addEventListener('click', () => {
+  quizResult.hidden = true;
+  quizFormView.hidden = false;
+});
+quizResultList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-quiz-adopt]');
+  if (!button) return;
+  compatibilityDialog.close();
+  openPetDetail(button.dataset.quizAdopt);
+});
+
+refugeList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-refuge-id]');
+  const refuge = refuges.find((entry) => entry.id === button?.dataset.refugeId);
+  if (refuge) focusRefuge(refuge);
+});
+
 petDetailFavorite.addEventListener('click', () => {
   const petId = petDetailFavorite.dataset.petId;
   if (!petId) return;
@@ -1074,6 +1212,7 @@ renderCatalogFilters();
 renderPets();
 renderRecommendations();
 renderImpactStats();
+initializeRefugeMap();
 observeReveals();
 updateAuthTrigger();
 applyTheme(localStorage.getItem('adopme-theme') || 'light');
