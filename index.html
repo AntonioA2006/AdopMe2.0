@@ -22,6 +22,7 @@
     <script type="module" src="src/main.js"></script>
   </head>
   <body>
+    <a class="skip-link" href="#catalogo">Saltar al catálogo</a>
     <header class="site-header">
       <a class="wordmark" href="#inicio" aria-label="AdopMe, inicio">
         <img class="wordmark-mark" src="src/adopme-mark.svg" alt="" />AdopMe<span class="wordmark-period">.</span>
@@ -114,12 +115,12 @@
             <button class="filter-button" type="button" data-category="Otros" aria-pressed="false">Otros</button>
           </div>
 
-          <div class="facet-group" aria-label="Filtrar por edad">
+          <div class="facet-group" role="group" aria-label="Filtrar por edad">
             <span class="facet-label">Edad</span>
             <div class="facet-chips" id="age-filters"></div>
           </div>
 
-          <div class="facet-group" aria-label="Filtrar por tamaño">
+          <div class="facet-group" role="group" aria-label="Filtrar por tamaño">
             <span class="facet-label">Tamaño</span>
             <div class="facet-chips" id="size-filters"></div>
           </div>
