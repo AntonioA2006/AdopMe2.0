@@ -21,6 +21,7 @@ export function queryApp(doc) {
     authTrigger: required(doc, '#auth-trigger'),
     loginForm: required(doc, '#login-form'),
     registerForm: required(doc, '#register-form'),
+    forgotPassword: required(doc, '#forgot-password'),
     authFeedback: required(doc, '#auth-feedback'),
     authToast: required(doc, '#auth-toast'),
     themeToggle: required(doc, '#theme-toggle'),

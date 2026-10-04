@@ -357,7 +357,9 @@ kbd { min-width: 20px; padding: 2px 5px; border: 1px solid #e1e4dc; border-radiu
 .auth-form .submit-button { margin-top: 3px; }
 .auth-form button:disabled { cursor: wait; opacity: .7; }
 .auth-feedback { min-height: 16px; margin: 12px 0 0; color: #a1493e; font-size: 10px; line-height: 1.5; }
+.auth-form .auth-switch { margin: 2px 0 12px; }
 .auth-switch { margin: 13px 0 0; color: var(--muted); font-size: 11px; }
+input[type="file"] { width: 100%; font-size: 12px; color: var(--muted); }
 .auth-switch button { padding: 0; border: 0; background: transparent; color: #667a33; cursor: pointer; font-size: inherit; font-weight: 700; }
 .auth-demo-note { margin: 18px 0 0; padding-top: 13px; border-top: 1px solid var(--line); color: #7b857c; font-size: 9px; line-height: 1.5; }
 .auth-toast { position: fixed; z-index: 5; right: 24px; bottom: 24px; max-width: min(360px, calc(100% - 32px)); padding: 14px 18px; border-left: 3px solid var(--lime); background: var(--green); color: white; box-shadow: 0 12px 35px rgba(24,39,30,.2); font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(12px); transition: opacity .25s, transform .25s; }

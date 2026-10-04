@@ -1,8 +1,8 @@
-import { StorageError, ValidationError } from '../../shared/errors.js';
+import { userMessage } from '../../shared/errors.js';
 import { createListenerGroup } from '../../shared/utils/listen.js';
 import { managedPetRow, managedRequestRow } from '../../ui/render/management.js';
 
-export function createRefugePanelController({ document, window, dom, catalog, adoptions, actions, config }) {
+export function createRefugePanelController({ document, window, dom, catalog, adoptions, auth, actions, config, backendKind = 'local' }) {
   const listen = createListenerGroup();
 
   function renderPets() {
@@ -36,9 +36,20 @@ export function createRefugePanelController({ document, window, dom, catalog, ad
     document.querySelector('#refuge-requests-view').hidden = !showRequests;
   }
 
+  function canManage() {
+    return typeof auth?.canManageRefuge === 'function' ? auth.canManageRefuge() : true;
+  }
+
   function open() {
     setTab('pets');
     render();
+    const disclaimer = document.querySelector('.panel-disclaimer');
+    if (backendKind === 'firebase' && !canManage()) {
+      dom.petFormFeedback.textContent = 'Este panel escribe en Firebase solo si tu uid está en admins/{uid}.';
+      if (disclaimer) disclaimer.textContent = 'Tu cuenta no es de refugio. Las lecturas públicas siguen disponibles; las altas las hace un administrador.';
+    } else if (backendKind === 'firebase' && disclaimer) {
+      disclaimer.textContent = 'Los cambios se guardan en Firebase para esta cuenta de refugio.';
+    }
     dom.refugeDialog.showModal();
   }
 
@@ -48,69 +59,77 @@ export function createRefugePanelController({ document, window, dom, catalog, ad
       if (tab) setTab(tab.dataset.refugeTab);
     });
 
-    listen.on(dom.petCreateForm, 'submit', (event) => {
+    listen.on(dom.petCreateForm, 'submit', async (event) => {
       event.preventDefault();
+      const submitButton = dom.petCreateForm.querySelector('[type="submit"]');
+      const payload = Object.fromEntries(new FormData(dom.petCreateForm).entries());
+      const file = dom.petCreateForm.elements.fotoArchivo?.files?.[0];
+      if (file && file.size) payload.fotoArchivo = file;
+      submitButton.disabled = true;
+      dom.petFormFeedback.textContent = 'Publicando…';
       try {
-        catalog.addPet(Object.fromEntries(new FormData(dom.petCreateForm).entries()));
+        await catalog.addPet(payload);
         dom.petCreateForm.reset();
-        dom.petFormFeedback.textContent = 'Mascota publicada en el catálogo de este navegador.';
+        dom.petFormFeedback.textContent = backendKind === 'firebase'
+          ? 'Mascota publicada en Firebase.'
+          : 'Mascota publicada en el catálogo de este navegador.';
         actions.notify('Mascota publicada correctamente.');
         actions.afterCatalogChange();
         renderPets();
       } catch (error) {
-        dom.petFormFeedback.textContent = error instanceof ValidationError || error instanceof StorageError
-          ? error.message
-          : 'No pudimos publicar la mascota.';
+        dom.petFormFeedback.textContent = userMessage(error, 'No pudimos publicar la mascota.');
+      } finally {
+        submitButton.disabled = false;
       }
     });
 
-    listen.on(dom.managedPets, 'change', (event) => {
+    listen.on(dom.managedPets, 'change', async (event) => {
       const statusSelect = event.target.closest('[data-pet-status]');
       if (!statusSelect) return;
       try {
-        const pet = catalog.setStatus(statusSelect.dataset.petStatus, statusSelect.value, config.petStatuses);
+        const pet = await catalog.setStatus(statusSelect.dataset.petStatus, statusSelect.value, config.petStatuses);
         if (!pet) return;
         actions.afterCatalogChange();
         renderPets();
         actions.notify(`Estado de ${pet.nombre} actualizado.`);
       } catch (error) {
-        actions.notify(error instanceof StorageError ? error.message : 'No pudimos actualizar el estado.');
+        actions.notify(userMessage(error, 'No pudimos actualizar el estado.'));
         renderPets();
       }
     });
 
-    listen.on(dom.managedPets, 'click', (event) => {
+    listen.on(dom.managedPets, 'click', async (event) => {
       const removeButton = event.target.closest('[data-delete-pet]');
       if (!removeButton) return;
       const pet = catalog.getPetById(removeButton.dataset.deletePet);
       if (!pet || !window.confirm(`¿Eliminar a ${pet.nombre} del catálogo?`)) return;
       try {
-        catalog.remove(pet.id);
+        await catalog.remove(pet.id);
         actions.afterCatalogChange();
         renderPets();
       } catch (error) {
-        actions.notify(error instanceof StorageError ? error.message : 'No pudimos eliminar la mascota.');
+        actions.notify(userMessage(error, 'No pudimos eliminar la mascota.'));
       }
     });
 
-    listen.on(dom.managedRequests, 'change', (event) => {
+    listen.on(dom.managedRequests, 'change', async (event) => {
       const statusSelect = event.target.closest('[data-request-status]');
       if (!statusSelect || !config.requestStatuses.includes(statusSelect.value)) return;
       try {
-        const updated = adoptions.update(statusSelect.dataset.requestStatus, {
+        const updated = await adoptions.update(statusSelect.dataset.requestStatus, {
           estadoSolicitud: statusSelect.value,
           actualizado: new Date().toISOString()
         });
         if (!updated) return;
         if (updated.estadoSolicitud === 'Adopción completada') {
-          catalog.markAdopted(updated.mascotaId);
+          await catalog.markAdopted(updated.mascotaId);
           actions.afterCatalogChange();
         }
         actions.afterRequestsChange();
         renderRequests();
         actions.notify(`Solicitud actualizada a ${updated.estadoSolicitud}.`);
       } catch (error) {
-        actions.notify(error instanceof StorageError ? error.message : 'No pudimos actualizar la solicitud.');
+        actions.notify(userMessage(error, 'No pudimos actualizar la solicitud.'));
       }
     });
   }

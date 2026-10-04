@@ -1,3 +1,4 @@
+import { userMessage } from '../../shared/errors.js';
 import { createListenerGroup } from '../../shared/utils/listen.js';
 import { quizResultItem, recommendationCard } from '../../ui/render/pets.js';
 
@@ -35,12 +36,12 @@ export function createCompatibilityController({ document, dom, catalog, favorite
       });
     });
 
-    listen.on(dom.compatibilityForm, 'submit', (event) => {
+    listen.on(dom.compatibilityForm, 'submit', async (event) => {
       event.preventDefault();
       try {
-        compatibility.save(Object.fromEntries(new FormData(dom.compatibilityForm).entries()));
+        await compatibility.save(Object.fromEntries(new FormData(dom.compatibilityForm).entries()));
       } catch (error) {
-        actions.notify(error?.message || 'No pudimos guardar tus preferencias en este navegador.');
+        actions.notify(userMessage(error, 'No pudimos guardar tus preferencias.'));
         return;
       }
       renderRecommendations();
@@ -61,11 +62,15 @@ export function createCompatibilityController({ document, dom, catalog, favorite
       actions.openDetail(button.dataset.quizAdopt);
     });
 
-    listen.on(dom.recommendationGrid, 'click', (event) => {
+    listen.on(dom.recommendationGrid, 'click', async (event) => {
       const favoriteButton = event.target.closest('[data-favorite]');
       const adoptButton = event.target.closest('[data-adopt]');
       if (favoriteButton) {
-        favorites.toggle(favoriteButton.dataset.favorite);
+        try {
+          await favorites.toggle(favoriteButton.dataset.favorite);
+        } catch (error) {
+          actions.notify(userMessage(error, 'No pudimos guardar el favorito.'));
+        }
         actions.renderPets();
         renderRecommendations();
         return;
