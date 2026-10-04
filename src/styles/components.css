@@ -90,18 +90,22 @@ h1 em, h2 em { color: var(--lime); font-weight: 500; }
 }
 
 .recommendations { padding-top: 30px; }
-.recommendation-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.recommendation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 22px; }
 .recommendation-card {
+  min-width: 0;
   background: var(--white);
   border: 1px solid var(--line);
   overflow: hidden;
 }
 .recommendation-photo-wrap { position: relative; height: 220px; overflow: hidden; }
 .recommendation-photo-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.recommendation-body { display: grid; gap: 12px; padding: 18px 18px 16px; }
-.recommendation-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.match-badge { display: inline-flex; align-items: center; padding: 6px 9px; background: rgba(133, 149, 54, 0.12); color: #849536; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
-.recommendation-card .meet-button { width: auto; padding: 10px 12px; border-top: 0; background: var(--green); color: var(--white); }
+.recommendation-body { display: grid; gap: 12px; min-width: 0; padding: 18px 18px 16px; }
+.recommendation-card .pet-name-row,
+.recommendation-card .pet-breed,
+.recommendation-card .pet-description { min-width: 0; overflow-wrap: break-word; }
+.recommendation-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.match-badge { display: inline-flex; align-items: center; max-width: 100%; padding: 6px 9px; background: rgba(133, 149, 54, 0.12); color: #849536; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.recommendation-card .meet-button { width: auto; max-width: 100%; padding: 10px 12px; border-top: 0; background: var(--green); color: var(--white); }
 .recommendation-card .meet-button:hover { background: #405d49; }
 
 .catalog { padding-top: 100px; padding-bottom: 102px; }
