@@ -1,0 +1,22 @@
+{
+  "name": "adopme",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AdopMe: adopción de mascotas en el navegador. Sin Firebase ni backend; los datos viven en localStorage.",
+  "scripts": {
+    "start": "python3 -m http.server 4173",
+    "test": "node --test tests/unit/*.test.js && playwright test",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AntonioA2006/AdopMe2.0.git"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.55.0"
+  }
+}

@@ -1,0 +1,29 @@
+@import url('./styles/base.css');
+@import url('./styles/components.css');
+@import url('./styles/motion.css');
+@import url('./styles/responsive.css');
+@import url('./styles/mobile-nav.css');
+
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 20;
+  padding: 8px 12px;
+  background: var(--green);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+.pet-card:focus-visible,
+.refuge-list-item:focus-visible,
+.facet-chip:focus-visible,
+.filter-button:focus-visible {
+  outline: 2px solid #849536;
+  outline-offset: 2px;
+}
