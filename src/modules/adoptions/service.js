@@ -1,5 +1,16 @@
 import { ValidationError } from '../../shared/errors.js';
 
+const REQUIRED_FIELDS = ['mascotaId', 'nombreAdoptante', 'correo', 'telefono', 'tipoVivienda', 'otrasMascotas', 'experiencia'];
+
+export function assertAdoptionRequest(request) {
+  if (!request?.cuentaCorreo) {
+    throw new ValidationError('Inicia sesión para enviar la solicitud.');
+  }
+  if (REQUIRED_FIELDS.some((field) => !String(request[field] ?? '').trim())) {
+    throw new ValidationError('Revisa los datos de la solicitud e inténtalo de nuevo.');
+  }
+}
+
 export function createAdoptionService(repository, { createId, now = () => new Date().toISOString() } = {}) {
   return {
     list() {
@@ -22,13 +33,7 @@ export function createAdoptionService(repository, { createId, now = () => new Da
       return current;
     },
     save(request) {
-      if (!request?.cuentaCorreo) {
-        throw new ValidationError('Inicia sesión para enviar la solicitud.');
-      }
-      const required = ['mascotaId', 'nombreAdoptante', 'correo', 'telefono', 'tipoVivienda', 'otrasMascotas', 'experiencia'];
-      if (required.some((field) => !String(request[field] ?? '').trim())) {
-        throw new ValidationError('Revisa los datos de la solicitud e inténtalo de nuevo.');
-      }
+      assertAdoptionRequest(request);
       const entry = { ...request, fecha: now() };
       const current = repository.read();
       current.push(entry);
