@@ -7,7 +7,12 @@ export const appConfig = {
     compatibility: 'adopme-compatibility',
     accounts: 'adopme-accounts',
     theme: 'adopme-theme',
-    session: 'adopme-session'
+    session: 'adopme-session',
+    backend: 'adopme-backend'
+  },
+  photo: {
+    maxBytes: 2 * 1024 * 1024,
+    mimeTypes: ['image/jpeg', 'image/png', 'image/webp']
   },
   categories: ['Todas', 'Perros', 'Gatos', 'Otros'],
   ageFilters: ['Todos', 'Cachorro', 'Adulto', 'Senior'],

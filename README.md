@@ -1,12 +1,13 @@
 # AdopMe
 
-AdopMe es una aplicación de adopción de mascotas que corre entera en el navegador. La persona busca perros, gatos y otros compañeros, guarda favoritos, responde un test de compatibilidad, envía una solicitud y el refugio de demostración da seguimiento. No hay servidor de aplicación.
+AdopMe es una aplicación de adopción de mascotas que corre en el navegador. La persona busca perros, gatos y otros compañeros, guarda favoritos, responde un test de compatibilidad, envía una solicitud y el refugio da seguimiento.
 
-**No usa Firebase ni ningún otro backend.** Las cuentas, el catálogo editado, las solicitudes, los favoritos, el tema y el resultado del test viven en `localStorage` de este navegador. La sesión activa vive en `sessionStorage`. Si se borra el almacenamiento del sitio, esos datos desaparecen.
+Puede hablar con **Firebase** (Authentication, Firestore y Storage) o quedarse en **localStorage** si la config está apagada, si falta, o si el servicio no responde. Los servicios no eligen: `src/core/app.js` inyecta un adaptador u otro. La guía de consola y reglas está en [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md).
 
 ## Tecnologías
 
-- HTML, CSS y JavaScript en módulos ES, sin React, Angular ni Vue.
+- HTML, CSS y JavaScript en módulos ES, sin React, Angular ni Vue y sin bundler.
+- Firebase JS SDK 11.6.0 por el CDN modular de `gstatic`, solo si el backend activo es Firebase.
 - Leaflet 1.9.4 por CDN para el mapa de refugios en Morelia.
 - Playwright para las pruebas de extremo a extremo y `node:test` para servicios, validadores y repositorios.
 - Un servidor estático cualquiera. Los módulos ES no funcionan abriendo `index.html` como archivo (`file://`).
@@ -19,18 +20,20 @@ AdopMe es una aplicación de adopción de mascotas que corre entera en el navega
 ## Estructura
 
 ```
-config/app.config.js          Claves de almacenamiento, estados y parámetros
+config/app.config.js          Claves de almacenamiento, estados y límites de foto
+config/firebase.config.js     Config web pública (una sola copia)
 index.html                    Página única
 src/main.js                   Arranque
-src/core/                     Composición (app.js) y referencias al DOM
-src/infrastructure/storage/   Puerto de almacenamiento: navegador, memoria y JSON
-src/modules/<feature>/        Reglas, repositorio y controlador de cada feature
+src/core/                     Elige backend, compone la app y mira el DOM
+src/infrastructure/storage/   Puerto localStorage: navegador, memoria y JSON
+src/infrastructure/firebase/  Init, SDK por CDN, errores y subida de fotos
+src/modules/remote/           Repositorios y servicios que no importan el SDK
+src/modules/<feature>/        Reglas, repositorio local y controlador
 src/shared/                   Errores, validadores y utilidades
 src/ui/                       HTML escapado, toasts y movimiento
-src/styles/                   CSS partido en base, componentes, movimiento y responsive
-tests/unit/                   Pruebas de Node
-tests/adopme.spec.js          Flujos de Playwright
-docs/                         Auditoría, arquitectura y contribución
+firestore.rules               Lectura pública del catálogo y escrituras del dueño
+storage.rules                 Fotos en pets/{uid}/{petId}/…
+docs/FIREBASE_SETUP.md        Consola, dominios, reglas y semilla
 ```
 
 La navegación de la página son anclas (`#catalogo`, `#refugios`, `#proceso`). No hay router.
@@ -41,7 +44,7 @@ La navegación de la página son anclas (`#catalogo`, `#refugios`, `#proceso`). 
 npm install
 ```
 
-`npm install` solo descarga Playwright. La aplicación en el navegador no empaqueta dependencias.
+`npm install` descarga Playwright y, si están declaradas, las herramientas del emulador. La página no empaqueta `node_modules`: el SDK de Firebase entra por CDN.
 
 ## Ejecutar en local
 
@@ -56,10 +59,13 @@ El mismo puerto usa la configuración de Playwright. Si ya hay un proceso escuch
 ## Pruebas
 
 ```bash
-npm test          # node:test y después Playwright
+npm test          # node:test y después Playwright, en respaldo local
 npm run test:unit # solo servicios, validadores y repositorios
 npm run test:e2e  # solo Playwright
+npm run test:rules # emulador de Firestore; hace falta Java
 ```
+
+Playwright escribe `adopme-backend=local` antes de abrir la página. Así la suite no registra usuarios en el proyecto real.
 
 La primera vez que Playwright necesite el navegador:
 
@@ -69,7 +75,7 @@ npx playwright install chromium
 
 ## Arquitectura en una frase
 
-`createApp` construye adaptadores de almacenamiento, se los inyecta a los repositorios y los servicios no conocen `localStorage`. Los controladores escuchan la página y pintan con funciones de `src/ui`. El detalle está en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+`createApp` elige Firebase o `localStorage`, inyecta los repositorios y los servicios no importan el SDK ni llaman a `localStorage`. Los controladores escuchan la página y pintan con funciones de `src/ui`. El detalle está en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Cómo agregar un módulo
 
@@ -80,10 +86,11 @@ npx playwright install chromium
 
 ## Convenciones
 
-- JavaScript con módulos ES y funciones de fábrica. Hay clases solo para los errores (`AppError`, `StorageError`, `ValidationError`).
+- JavaScript con módulos ES y funciones de fábrica. Hay clases solo para los errores (`AppError`, `StorageError`, `ValidationError`, `AuthError`, `ConnectionError`).
 - El repositorio lee y escribe. El servicio decide. El controlador coordina. La UI arma HTML.
 - Todo texto que venga de datos y se meta en `innerHTML` pasa por `escapeHtml`. Las fotos pasan por `safeImageUrl`.
-- Las claves `adopme-*` y la forma de los JSON se mantienen para no perder datos ya guardados. El hash de contraseña es PBKDF2-SHA256 con 120 000 iteraciones: cambiarlo invalida las cuentas existentes.
+- Las claves `adopme-*` y la forma de los JSON se mantienen para el modo local. Ahí el hash sigue siendo PBKDF2-SHA256 con 120 000 iteraciones.
+- Con Firebase la contraseña no se guarda en Firestore ni en el navegador. El perfil es `users/{uid}`.
 - No se suben secretos, `node_modules/` ni `test-results/`.
 
 ## Datos que ya entiende la aplicación

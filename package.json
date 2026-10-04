@@ -3,13 +3,15 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "AdopMe: adopción de mascotas en el navegador. Sin Firebase ni backend; los datos viven en localStorage.",
+  "description": "AdopMe: adopción de mascotas en el navegador. Firebase opcional; sin red usa localStorage.",
   "scripts": {
     "start": "python3 -m http.server 4173",
     "test": "node --test tests/unit/*.test.js && playwright test",
     "test:unit": "node --test tests/unit/*.test.js",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "test:rules": "firebase emulators:exec --only firestore \"node --test tests/rules/firestore.rules.test.js\"",
+    "seed:plan": "node scripts/seed-firestore.mjs"
   },
   "repository": {
     "type": "git",
@@ -17,6 +19,9 @@
   },
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.55.0"
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "@playwright/test": "^1.55.0",
+    "firebase": "^11.6.0",
+    "firebase-tools": "^13.35.1"
   }
 }

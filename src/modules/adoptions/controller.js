@@ -1,4 +1,4 @@
-import { ValidationError } from '../../shared/errors.js';
+import { userMessage } from '../../shared/errors.js';
 import { createId } from '../../shared/utils/id.js';
 import { createListenerGroup } from '../../shared/utils/listen.js';
 import { summaryMarkup, trackingItem } from '../../ui/render/management.js';
@@ -75,12 +75,14 @@ export function createAdoptionController({ document, window, dom, catalog, adopt
   }
 
   function bind() {
-    listen.on(dom.adoptionForm, 'submit', (event) => {
+    listen.on(dom.adoptionForm, 'submit', async (event) => {
       event.preventDefault();
       const session = auth.current();
       const request = Object.fromEntries(new FormData(dom.adoptionForm).entries());
+      const submitButton = document.querySelector('#application-submit');
+      submitButton.disabled = true;
       try {
-        adoptions.save({
+        await adoptions.save({
           ...request,
           solicitudId: createId(window.crypto),
           cuentaCorreo: session?.correo,
@@ -93,9 +95,9 @@ export function createAdoptionController({ document, window, dom, catalog, adopt
         actions.afterRequestsChange();
         actions.notify('Solicitud enviada correctamente.');
       } catch (error) {
-        window.alert(error instanceof ValidationError
-          ? error.message
-          : 'No pudimos guardar tu solicitud. Revisa la configuración de almacenamiento de tu navegador e inténtalo de nuevo.');
+        actions.notify(userMessage(error, 'No pudimos guardar tu solicitud. Inténtalo de nuevo.'));
+      } finally {
+        submitButton.disabled = false;
       }
     });
 

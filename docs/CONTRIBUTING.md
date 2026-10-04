@@ -2,7 +2,7 @@
 
 ## Rama
 
-El trabajo nuevo sale de `main`. La rama `feature/adopme` es historia vieja y no se usa como base. Este refactor vive en `refactor/modular-architecture` y no se fusiona a `main` desde aquí.
+El trabajo nuevo sale de `main`. La rama `feature/adopme` es historia vieja y no se usa como base. Firebase vive en `feat/firebase-integration`.
 
 ## Entorno
 
@@ -24,7 +24,8 @@ npm test
 
 ## Cómo está partido el código
 
-- No llames a `localStorage` ni a `sessionStorage` fuera de `src/infrastructure/storage/`.
+- No llames a `localStorage`, `sessionStorage` ni al SDK de Firebase fuera de `src/infrastructure/`.
+- No guardes contraseñas, sales ni hashes en Firestore.
 - No pongas reglas de negocio en los controladores ni HTML en los servicios.
 - Pasa dependencias por argumentos (`createX({ repository })`). No uses variables globales.
 - Si añades una clave, documéntala en `config/app.config.js` y en el README. Conserva las claves `adopme-*` ya existentes.

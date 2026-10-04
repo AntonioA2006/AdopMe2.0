@@ -1,4 +1,4 @@
-import { ValidationError } from '../../shared/errors.js';
+import { userMessage } from '../../shared/errors.js';
 import { createListenerGroup } from '../../shared/utils/listen.js';
 
 export function createAuthController({ document, window, dom, auth, actions }) {
@@ -57,7 +57,7 @@ export function createAuthController({ document, window, dom, auth, actions }) {
     const submitButton = form.querySelector('[type="submit"]');
     const formData = new FormData(form);
     submitButton.disabled = true;
-    dom.authFeedback.textContent = '';
+    dom.authFeedback.textContent = mode === 'register' ? 'Creando tu cuenta…' : 'Iniciando sesión…';
 
     try {
       const account = mode === 'register'
@@ -76,23 +76,30 @@ export function createAuthController({ document, window, dom, auth, actions }) {
       const firstName = account.nombre.split(' ')[0];
       actions.notify(mode === 'register' ? `¡Bienvenido, ${firstName}!` : `Qué gusto verte, ${firstName}.`);
     } catch (error) {
-      dom.authFeedback.textContent = error instanceof ValidationError
-        ? error.message
-        : mode === 'register'
-          ? 'No pudimos guardar tu cuenta en este navegador. Inténtalo de nuevo.'
-          : 'No pudimos iniciar sesión en este navegador. Inténtalo de nuevo.';
+      dom.authFeedback.textContent = userMessage(
+        error,
+        mode === 'register'
+          ? 'No pudimos guardar tu cuenta. Inténtalo de nuevo.'
+          : 'No pudimos iniciar sesión. Inténtalo de nuevo.'
+      );
     } finally {
       submitButton.disabled = false;
     }
   }
 
   function bind() {
-    listen.on(dom.authTrigger, 'click', () => {
+    listen.on(dom.authTrigger, 'click', async () => {
       if (auth.current()) {
-        auth.logout();
-        updateTrigger();
-        actions.notify('Has cerrado tu sesión.');
-        actions.renderTracking();
+        try {
+          await auth.logout();
+          updateTrigger();
+          actions.notify('Has cerrado tu sesión.');
+          actions.renderTracking();
+          actions.renderPets();
+          actions.renderRecommendations();
+        } catch (error) {
+          actions.notify(userMessage(error, 'No pudimos cerrar la sesión.'));
+        }
         return;
       }
       setAuthMode('login');
@@ -117,6 +124,23 @@ export function createAuthController({ document, window, dom, auth, actions }) {
       if (event.target === dom.authDialog) {
         clearPending();
         dom.authDialog.close();
+      }
+    });
+    listen.on(dom.forgotPassword, 'click', async () => {
+      const correo = String(new FormData(dom.loginForm).get('correo') ?? '');
+      if (typeof auth.resetPassword !== 'function') {
+        dom.authFeedback.textContent = 'En este navegador la cuenta es local. Si no recuerdas la contraseña, crea una cuenta nueva.';
+        return;
+      }
+      dom.forgotPassword.disabled = true;
+      dom.authFeedback.textContent = 'Enviando enlace…';
+      try {
+        await auth.resetPassword(correo);
+        dom.authFeedback.textContent = 'Si existe una cuenta con ese correo, enviamos un enlace para restablecer la contraseña.';
+      } catch (error) {
+        dom.authFeedback.textContent = userMessage(error, 'No pudimos enviar el correo de restablecimiento.');
+      } finally {
+        dom.forgotPassword.disabled = false;
       }
     });
     listen.on(dom.loginForm, 'submit', (event) => {

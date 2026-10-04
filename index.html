@@ -300,6 +300,7 @@
         <form class="auth-form" id="login-form">
           <label>Correo electrónico<input name="correo" type="email" autocomplete="email" required maxlength="120" pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$" title="Escribe un correo válido, por ejemplo: tu@correo.com" placeholder="tu@correo.com" /></label>
           <label>Contraseña<input name="password" type="password" autocomplete="current-password" required minlength="8" title="La contraseña debe tener al menos 8 caracteres." placeholder="Al menos 8 caracteres" /></label>
+          <p class="auth-switch"><button id="forgot-password" type="button">¿Olvidaste tu contraseña?</button></p>
           <button class="submit-button" type="submit">Iniciar sesión <span aria-hidden="true">↗</span></button>
         </form>
         <form class="auth-form" id="register-form" hidden>
@@ -412,8 +413,9 @@
           </div>
           <div class="form-row">
             <label>Edad<input name="edad" required maxlength="40" placeholder="2 años" /></label>
-            <label>Foto (URL)<input name="foto" type="url" required placeholder="https://..." /></label>
+            <label>Foto (URL https)<input name="foto" type="url" placeholder="https://..." /></label>
           </div>
+          <label>o archivo JPEG, PNG o WebP <span class="optional-label">máx. 2 MB, con Firebase</span><input name="fotoArchivo" type="file" accept="image/jpeg,image/png,image/webp" /></label>
           <label>Descripción<textarea name="descripcion" required maxlength="240" rows="2" placeholder="Personalidad y lo que busca en su hogar"></textarea></label>
           <button class="submit-button" type="submit">Publicar mascota <span aria-hidden="true">↗</span></button>
           <p class="panel-feedback" id="pet-form-feedback" role="status" aria-live="polite"></p>

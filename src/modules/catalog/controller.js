@@ -1,3 +1,4 @@
+import { userMessage } from '../../shared/errors.js';
 import { filterCatalog, resultsLabel } from './model.js';
 import { filterChips, petCard } from '../../ui/render/pets.js';
 import { escapeHtml, safeImageUrl } from '../../shared/utils/html.js';
@@ -41,8 +42,12 @@ export function createCatalogController({ document, window, dom, catalog, favori
     paintFavoriteCount();
   }
 
-  function toggleFavorite(petId) {
-    favorites.toggle(petId);
+  async function toggleFavorite(petId) {
+    try {
+      await favorites.toggle(petId);
+    } catch (error) {
+      actions.notify(userMessage(error, 'No pudimos guardar el favorito.'));
+    }
     render();
     actions.renderRecommendations();
   }
@@ -147,10 +152,14 @@ export function createCatalogController({ document, window, dom, catalog, favori
       openDetail(card.dataset.openPet);
     });
 
-    listen.on(dom.petDetailFavorite, 'click', () => {
+    listen.on(dom.petDetailFavorite, 'click', async () => {
       const petId = dom.petDetailFavorite.dataset.petId;
       if (!petId) return;
-      favorites.toggle(petId);
+      try {
+        await favorites.toggle(petId);
+      } catch (error) {
+        actions.notify(userMessage(error, 'No pudimos guardar el favorito.'));
+      }
       render();
       actions.renderRecommendations();
       openDetail(petId);

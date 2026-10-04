@@ -1,25 +1,15 @@
 import { appConfig } from '../../config/app.config.js';
-import { createId } from '../shared/utils/id.js';
+import { firebaseConfig as defaultFirebaseConfig } from '../../config/firebase.config.js';
 import { createListenerGroup } from '../shared/utils/listen.js';
-import { createBrowserStorage } from '../infrastructure/storage/browser-storage.js';
-import { createJsonStore } from '../infrastructure/storage/json-store.js';
+import { userMessage } from '../shared/errors.js';
 import { queryApp } from './dom.js';
+import { resolveServices, selectBackend } from './backend.js';
 import { createToast } from '../ui/toast.js';
 import { createMotion } from '../ui/motion.js';
 import { createMobileNav } from '../ui/mobile-nav.js';
-import { seedPets } from '../modules/catalog/seed.js';
-import { createPetRepository } from '../modules/catalog/repository.js';
-import { createCatalogService } from '../modules/catalog/service.js';
 import { createCatalogController } from '../modules/catalog/controller.js';
-import { createFavoritesRepository } from '../modules/favorites/repository.js';
-import { createFavoritesService } from '../modules/favorites/service.js';
-import { createAdoptionRepository } from '../modules/adoptions/repository.js';
-import { createAdoptionService } from '../modules/adoptions/service.js';
 import { createAdoptionController } from '../modules/adoptions/controller.js';
-import { createAccountRepository, createSessionRepository } from '../modules/auth/repository.js';
-import { createAuthService } from '../modules/auth/service.js';
 import { createAuthController } from '../modules/auth/controller.js';
-import { createCompatibilityRepository, createCompatibilityService } from '../modules/compatibility/service.js';
 import { createCompatibilityController } from '../modules/compatibility/controller.js';
 import { refuges } from '../modules/refuges/data.js';
 import { createRefugeMapController } from '../modules/refuges/controller.js';
@@ -27,40 +17,32 @@ import { createRefugePanelController } from '../modules/refuge-panel/controller.
 import { createThemeController } from '../modules/theme/controller.js';
 import { computeImpactStats } from '../modules/stats/service.js';
 
-export function createApp({
+export async function createApp({
   document,
   window,
   localStorage,
   sessionStorage,
-  config = appConfig
+  config = appConfig,
+  firebaseConfig = defaultFirebaseConfig
 }) {
-  const persistent = createBrowserStorage(localStorage);
-  const sessions = createBrowserStorage(sessionStorage);
-  const catalog = createCatalogService({
-    repository: createPetRepository(createJsonStore(persistent, config.keys.pets), seedPets),
-    createId: () => createId(window.crypto)
+  const decision = selectBackend({
+    firebaseConfig,
+    storage: localStorage,
+    backendKey: config.keys.backend
   });
-  const favorites = createFavoritesService(
-    createFavoritesRepository(createJsonStore(persistent, config.keys.favorites))
-  );
-  const adoptions = createAdoptionService(
-    createAdoptionRepository(createJsonStore(persistent, config.keys.adoptions)),
-    { createId: () => createId(window.crypto) }
-  );
-  const auth = createAuthService({
-    accounts: createAccountRepository(createJsonStore(persistent, config.keys.accounts)),
-    session: createSessionRepository(sessions, config.keys.session),
-    crypto: window.crypto,
-    password: config.password
-  });
-  const compatibility = createCompatibilityService(
-    createCompatibilityRepository(createJsonStore(persistent, config.keys.compatibility))
-  );
+  if (decision.mode === 'firebase') {
+    const results = document.querySelector('#results-count');
+    if (results) results.textContent = 'Cargando catálogo…';
+  }
+
+  const services = await resolveServices({ window, localStorage, sessionStorage, config, firebaseConfig });
+  const { catalog, favorites, adoptions, auth, compatibility, persistent } = services;
   const dom = queryApp(document);
   const toast = createToast(dom.authToast, window);
   const motion = createMotion({ document, window });
   const mobileNav = createMobileNav({ document, window });
   const shell = createListenerGroup();
+  let stopAuth = () => {};
 
   const actions = {
     notify(message) {
@@ -116,7 +98,7 @@ export function createApp({
     document, window, dom, refuges, mapConfig: config.map
   });
   const refugePanel = createRefugePanelController({
-    document, window, dom, catalog, adoptions, actions, config
+    document, window, dom, catalog, adoptions, auth, actions, config, backendKind: services.kind
   });
   const theme = createThemeController({
     document,
@@ -131,6 +113,34 @@ export function createApp({
     dom.statsRequests.textContent = String(stats.requests);
     dom.statsFamilies.textContent = String(stats.families);
     dom.petCount.textContent = String(stats.available);
+  }
+
+  async function syncAccount(event) {
+    if (event.reason === 'expired') actions.notify('Tu sesión expiró. Vuelve a iniciar sesión.');
+    if (event.reason === 'error') actions.notify('No hay conexión con Firebase. Inténtalo de nuevo.');
+    try {
+      if (event.user) {
+        await Promise.all([
+          favorites.hydrate?.(),
+          compatibility.hydrate?.(),
+          adoptions.hydrate?.(),
+          catalog.hydrate?.({ asAdmin: Boolean(auth.canManageRefuge?.()) })
+        ]);
+      } else {
+        favorites.replace?.([]);
+        compatibility.replace?.(null);
+        adoptions.replace?.([]);
+        if (catalog.hydrate) await catalog.hydrate({ asAdmin: false });
+      }
+    } catch (error) {
+      actions.notify(userMessage(error, 'No pudimos sincronizar tu cuenta.'));
+    }
+    authController.updateTrigger();
+    catalogController.render();
+    compatibilityController.renderRecommendations();
+    paintStats();
+    adoptionController.renderTracking();
+    if (document.querySelector('#refuge-dialog')?.open) refugePanel.render();
   }
 
   function bindShell() {
@@ -153,15 +163,22 @@ export function createApp({
   }
 
   function start() {
-    try {
-      adoptions.migrate();
-    } catch {
-      // Una cuota llena no debe impedir ver el catálogo.
+    document.documentElement.dataset.backend = services.kind;
+    const note = document.querySelector('.auth-demo-note');
+    if (note && services.kind === 'firebase') {
+      note.textContent = 'La cuenta vive en Firebase. La contraseña no se guarda en este navegador ni en la base de datos.';
     }
-    try {
-      favorites.persist();
-    } catch {
-      // Igual que arriba: la lista en memoria sigue usable.
+    if (services.kind !== 'firebase') {
+      try {
+        adoptions.migrate();
+      } catch {
+        // Una cuota llena no debe impedir ver el catálogo.
+      }
+      try {
+        favorites.persist();
+      } catch {
+        // Igual que arriba: la lista en memoria sigue usable.
+      }
     }
     theme.apply(persistent.getItem(config.keys.theme));
     bindShell();
@@ -181,9 +198,13 @@ export function createApp({
     motion.observe(document);
     authController.updateTrigger();
     motion.bindParallax();
+    if (typeof auth.subscribe === 'function') stopAuth = auth.subscribe((event) => { syncAccount(event); });
+    if (services.notice) toast.show(services.notice);
   }
 
   function destroy() {
+    stopAuth();
+    auth.destroy?.();
     shell.destroy();
     catalogController.destroy();
     adoptionController.destroy();

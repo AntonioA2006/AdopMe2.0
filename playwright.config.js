@@ -4,9 +4,10 @@ export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.js',
   use: {
+    ...devices['Desktop Chrome'],
     baseURL: 'http://127.0.0.1:4173',
-    trace: 'on-first-retry',
-    ...devices['Desktop Chrome']
+    storageState: 'tests/local-backend.storage.json',
+    trace: 'on-first-retry'
   },
   webServer: {
     command: 'python3 -m http.server 4173',

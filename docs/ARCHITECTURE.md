@@ -1,6 +1,6 @@
 # Arquitectura
 
-AdopMe es una sola página. El estado de negocio vive en el navegador y la interfaz no habla con un servidor propio. **No hay Firebase.** El mapa pide teselas a OpenStreetMap y las fuentes e imágenes salen de CDNs; eso no guarda datos de la aplicación.
+AdopMe es una sola página. El mapa pide teselas a OpenStreetMap y las fuentes salen de CDNs. Los datos de la app viven en `localStorage` o, si la config es válida y la red responde, en Firebase. El servicio no sabe cuál de los dos le tocó: `createApp` inyecta el repositorio. El detalle de consola, reglas y semilla está en [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
 
 ## Antes
 
@@ -75,8 +75,21 @@ El panel de refugio sigue siendo una demo de este navegador: no pide sesión. As
 
 El HTML dinámico se escapa con `escapeHtml`. Las URLs de foto solo se pintan si el esquema es `http` o `https` (`safeImageUrl`). El alta nueva exige `https`.
 
+## Firebase y el respaldo local
+
+`selectBackend` en `src/core/backend.js` devuelve `local` si `adopme-backend` vale `local`, si `config/firebase.config.js` tiene `enabled: false`, si faltan claves o si `initFirebase` / la primera lectura fallan. En ese caso se construyen los mismos servicios de siempre (`src/core/local-services.js`). Playwright guarda esa clave antes de cargar la página, así que la suite no abre el proyecto real.
+
+Con Firebase, `src/infrastructure/firebase/stack.js` arma auth, catálogo, favoritos, test y solicitudes sobre un puerto de documentos. Los servicios de `src/modules/remote/` hablan con ese puerto, no con el SDK. El SDK modular 11.6.0 entra por CDN solo dentro de `client.js` (`initializeApp` con `getApps`, persistencia local, Analytics únicamente si `isSupported()`).
+
+La contraseña no se escribe en Firestore ni en `localStorage` cuando manda Firebase. El perfil es `users/{uid}` (`nombre`, `correo`, `creado`). El modo local conserva PBKDF2 y 120 000 iteraciones para las cuentas que ya estaban en el navegador.
+
+El panel de refugio en local no pide sesión. En Firebase solo publica y cambia estados si existe `admins/{uid}`, documento que se crea en la consola. Las reglas no dejan que cualquiera escriba mascotas o solicitudes ajenas.
+
+La semilla de seis mascotas se enseña si `pets` está vacío y no se copia sola.
+
 ## Qué se dejó fuera a propósito
 
-- Firebase y cualquier backend.
+- Un bundler. El SDK entra por la URL de gstatic fijada en `sdk.js`.
 - Un router y un bus de eventos: no aportan en una sola página.
+- Custom claims. El rol de refugio es la colección `admins`, porque el navegador no puede firmar claims.
 - Archivos vacíos «por si acaso». Cada archivo importa o lo importa alguien.
