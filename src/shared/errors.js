@@ -17,3 +17,19 @@ export class ValidationError extends AppError {
     super(message, { code, cause });
   }
 }
+
+export class AuthError extends AppError {
+  constructor(message, { code = 'AUTH', cause } = {}) {
+    super(message, { code, cause });
+  }
+}
+
+export class ConnectionError extends AppError {
+  constructor(message, { code = 'CONNECTION', cause } = {}) {
+    super(message, { code, cause });
+  }
+}
+
+export function userMessage(error, fallback) {
+  return error instanceof AppError && error.message ? error.message : fallback;
+}
