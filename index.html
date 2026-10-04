@@ -27,7 +27,10 @@
       <a class="wordmark" href="#inicio" aria-label="AdopMe, inicio">
         <img class="wordmark-mark" src="src/adopme-mark.svg" alt="" />AdopMe<span class="wordmark-period">.</span>
       </a>
-      <nav class="main-nav" aria-label="Navegación principal">
+      <button class="nav-toggle" id="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Abrir menú">
+        <span class="nav-toggle-icon" aria-hidden="true"></span>
+      </button>
+      <nav class="main-nav" id="main-nav" aria-label="Navegación principal">
         <a href="#catalogo">Mascotas</a>
         <a href="#proceso">Cómo funciona</a>
         <button class="nav-action" type="button" data-open-requests>Mis solicitudes</button>

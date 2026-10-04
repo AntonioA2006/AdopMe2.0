@@ -30,7 +30,7 @@ src/core/app.js          crea adaptadores e inyecta dependencias
    └── ui/render      cadenas HTML ya escapadas
 ```
 
-No hay router: `#catalogo` y `#refugios` son anclas del navegador. No hay bus de eventos. `app.js` pasa un objeto `actions` para que un controlador pida «abre la solicitud» o «repinta recomendaciones» sin importar al otro. Así no se forman ciclos.
+No hay router: `#catalogo` y `#refugios` son anclas del navegador. No hay bus de eventos. En viewports de 700px o menos, `src/ui/mobile-nav.js` muestra la misma navegación en un panel. El botón usa `aria-expanded` y `aria-controls`, y el cierre (enlace, Escape o clic fuera) devuelve el foco al botón. `app.js` pasa un objeto `actions` para que un controlador pida «abre la solicitud» o «repinta recomendaciones» sin importar al otro. Así no se forman ciclos.
 
 ## Inversión de dependencias
 

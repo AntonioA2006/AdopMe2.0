@@ -6,6 +6,7 @@ import { createJsonStore } from '../infrastructure/storage/json-store.js';
 import { queryApp } from './dom.js';
 import { createToast } from '../ui/toast.js';
 import { createMotion } from '../ui/motion.js';
+import { createMobileNav } from '../ui/mobile-nav.js';
 import { seedPets } from '../modules/catalog/seed.js';
 import { createPetRepository } from '../modules/catalog/repository.js';
 import { createCatalogService } from '../modules/catalog/service.js';
@@ -58,6 +59,7 @@ export function createApp({
   const dom = queryApp(document);
   const toast = createToast(dom.authToast, window);
   const motion = createMotion({ document, window });
+  const mobileNav = createMobileNav({ document, window });
   const shell = createListenerGroup();
 
   const actions = {
@@ -170,6 +172,7 @@ export function createApp({
     refugeMap.bind();
     refugePanel.bind();
     theme.bind();
+    mobileNav.bind();
     catalogController.renderFilters();
     catalogController.render();
     compatibilityController.renderRecommendations();
@@ -189,6 +192,7 @@ export function createApp({
     refugeMap.destroy();
     refugePanel.destroy();
     theme.destroy();
+    mobileNav.destroy();
     motion.destroy();
     toast.destroy();
   }

@@ -25,6 +25,7 @@
 
 @media (max-width: 700px) {
   .main-nav { display: none; }
+  .header-cta { display: none; }
 }
 
 @media (max-width: 540px) {
@@ -32,7 +33,6 @@
   .wordmark { gap: 6px; font-size: 18px; }
   .wordmark-mark { width: 27px; height: 27px; }
   .wordmark-period { margin-left: -6px; }
-  .main-nav { display: none; }
   .header-actions { gap: 0; }
   .auth-trigger { padding: 9px 0 9px 8px; font-size: 11px; }
   .header-cta { gap: 9px; padding: 9px 10px; font-size: 10px; }
