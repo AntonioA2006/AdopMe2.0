@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { appConfig } from '../../config/app.config.js';
-import { selectBackend } from '../../src/core/backend.js';
+import { selectBackend, withTimeout } from '../../src/core/backend.js';
 import { initFirebase, resetFirebaseForTests } from '../../src/infrastructure/firebase/client.js';
 import { createMemoryDocumentStore } from '../../src/infrastructure/firebase/document-store.js';
 import { mapFirebaseError } from '../../src/infrastructure/firebase/errors.js';
@@ -142,6 +142,13 @@ function profileStore() {
     }
   };
 }
+
+test('un arranque de Firebase que no responde cae por tiempo', async () => {
+  await assert.rejects(
+    withTimeout(new Promise(() => {}), 20),
+    (error) => error instanceof ConnectionError && /navegador/.test(error.message)
+  );
+});
 
 test('la configuración exige las claves públicas y rechaza marcadores de ejemplo', () => {
   assert.equal(validateFirebaseConfig(validConfig).projectId, 'adopme-712e6');

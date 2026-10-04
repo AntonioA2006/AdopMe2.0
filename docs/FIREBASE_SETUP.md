@@ -19,7 +19,7 @@ La configuración web pública vive en un solo módulo, `config/firebase.config.
 | Refugios del mapa | Cuatro fichas fijas en código | No se suben | Igual |
 | Foto | Solo URL `https` | URL `https` o archivo JPEG/PNG/WebP de hasta 2 MB en `pets/{uid}/{petId}/…` | Solo URL `https` |
 
-`src/core/app.js` elige el backend. Si `localStorage['adopme-backend']` es `local`, si `enabled` no es `true`, si la config no valida o si el SDK o Firestore fallan, se usan los adaptadores de `localStorage` y un toast explica el fallo. Las pruebas de Playwright fijan `adopme-backend=local` para no tocar el proyecto real.
+`src/core/app.js` elige el backend. Si `localStorage['adopme-backend']` es `local`, si `enabled` no es `true`, si la config no valida, si el SDK o Firestore fallan, o si no responden en 8 segundos, se usan los adaptadores de `localStorage` y un toast explica el fallo. Las pruebas de Playwright fijan `adopme-backend=local` para no tocar el proyecto real.
 
 ## Modelo
 
