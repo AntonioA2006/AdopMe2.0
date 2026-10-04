@@ -6,3 +6,8 @@ blob-report/
 *.log
 .env
 .env.*
+.firebase/
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
